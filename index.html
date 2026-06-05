@@ -25,6 +25,8 @@
         .tpu-card { border: 1px solid rgba(56, 189, 248, 0.2); background: rgba(8, 47, 73, 0.4); }
         .tpu-pulse { animation: tpu-glow 1.5s infinite; }
         @keyframes tpu-glow { 0%, 100% { border-color: rgba(56, 189, 248, 0.2); } 50% { border-color: rgba(56, 189, 248, 0.8); box-shadow: 0 0 15px rgba(56, 189, 248, 0.3); } }
+        
+        .hidden { display: none; }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden selection:bg-emerald-500/30">
@@ -146,9 +148,18 @@
                             rows="1"
                         ></textarea>
                     </div>
-                    <button id="send-btn" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 w-14 h-14 rounded-xl flex items-center justify-center disabled:opacity-20 transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
-                    </button>
+                    
+                    <div class="flex gap-3">
+                        <!-- Send Button -->
+                        <button id="send-btn" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 w-14 h-14 rounded-xl flex items-center justify-center transition-all shadow-xl active:scale-95">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                        </button>
+                        
+                        <!-- Stop Button (Hidden by default) -->
+                        <button id="stop-btn" class="bg-red-600 hover:bg-red-500 text-white w-14 h-14 rounded-xl hidden flex items-center justify-center transition-all shadow-xl active:scale-95">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="flex justify-between mt-5 px-1 text-[9px] font-black text-slate-700 uppercase tracking-[0.4em]">
@@ -162,6 +173,7 @@
         let CONTEXT_BUFFER = [];
         const MAX_TOKENS = 50000;
         let currentTokens = 320; 
+        let abortSignal = false;
 
         const ENGINE_130M = {
             coding: {
@@ -183,7 +195,8 @@
 
         const chat = document.getElementById('chat-output');
         const input = document.getElementById('user-prompt');
-        const btn = document.getElementById('send-btn');
+        const sendBtn = document.getElementById('send-btn');
+        const stopBtn = document.getElementById('stop-btn');
         const viewport = document.getElementById('scroll-area');
         const threadPool = document.getElementById('thread-pool');
         const cpuText = document.getElementById('cpu-percent');
@@ -221,19 +234,19 @@
                 t.style.backgroundColor = j > 75 ? '#10b981' : (j > 45 ? '#065f46' : '#1e293b');
             });
 
-            // TPU Simulation (Tensor Load)
+            // TPU Simulation
             const tpuLoad = isProcessing ? (85 + Math.random() * 14) : (Math.random() * 2);
             tpuFill.style.width = `${tpuLoad}%`;
             tpuVal.innerText = `${tpuLoad.toFixed(0)}%`;
             if(isProcessing) tpuCard.classList.add('tpu-pulse');
             else tpuCard.classList.remove('tpu-pulse');
 
-            // GPU 0 (USED Status for Context/Paging)
+            // GPU 0 (USED Status)
             const g0Load = 78 + (isProcessing ? (Math.random() * 12) : (Math.random() * 2));
             g0Fill.style.width = `${Math.min(g0Load, 99.9)}%`;
             g0Val.innerText = `${g0Load.toFixed(0)}%`;
             
-            // GPU 1 (Dynamic Vector Pool)
+            // GPU 1 (Dynamic Pool)
             const g1Load = isProcessing ? (60 + Math.random() * 35) : (12 + Math.random() * 3);
             g1Fill.style.width = `${g1Load}%`;
             g1Val.innerText = `${g1Load.toFixed(0)}%`;
@@ -253,6 +266,7 @@
         async function streamOut(el, text) {
             const words = text.split(' ');
             for (let word of words) {
+                if (abortSignal) break; // Check for stop
                 el.innerHTML += word + ' ';
                 viewport.scrollTop = viewport.scrollHeight;
                 await new Promise(r => setTimeout(r, 12 + Math.random() * 12));
@@ -280,7 +294,9 @@
             if(!prompt || isProcessing) return;
 
             isProcessing = true;
-            btn.disabled = true;
+            abortSignal = false;
+            sendBtn.classList.add('hidden');
+            stopBtn.classList.remove('hidden');
             input.value = '';
             
             const userBox = createMsg('user');
@@ -297,6 +313,8 @@
             const agentBox = createMsg('agent');
             
             for (let i = 0; i < taskList.length; i++) {
+                if (abortSignal) break;
+
                 const task = taskList[i].trim();
                 const thought = document.createElement('div');
                 thought.className = 'agent-thought';
@@ -313,21 +331,36 @@
 
                 const response = domain.exec(task);
                 await streamOut(agentBox, response + "\n\n");
-                CONTEXT_BUFFER.push(response);
-                updateContext(Math.floor(response.length / 2.5));
+                
+                if (!abortSignal) {
+                    CONTEXT_BUFFER.push(response);
+                    updateContext(Math.floor(response.length / 2.5));
+                }
+            }
+
+            if (abortSignal) {
+                const stopMsg = document.createElement('p');
+                stopMsg.className = "text-red-500 text-[10px] mt-2 font-bold italic";
+                stopMsg.innerText = "[INFERENCE_TERMINATED_BY_USER]";
+                agentBox.appendChild(stopMsg);
             }
 
             isProcessing = false;
             activeTasks = 0;
-            btn.disabled = false;
+            sendBtn.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
             statusBar.innerText = "TPU_POD: IDLE | SLI_MODE: SYNC | NODES: 130M";
             input.focus();
         }
 
-        btn.onclick = runInference;
+        stopBtn.onclick = () => {
+            abortSignal = true;
+            statusBar.innerText = "TPU_POD: EMERGENCY_STOP | COOLING_DOWN...";
+        };
+
+        sendBtn.onclick = runInference;
         input.onkeydown = (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runInference(); } };
         input.oninput = function() { this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'; };
     </script>
 </body>
 </html>
-
