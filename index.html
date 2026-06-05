@@ -1,11 +1,9 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smol-Agent 130M | Dual SLI 5090 Black Edition</title>
+    <title>Smol-Agent 130M | Dual SLI & TPU v6 Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;500;800&display=swap');
@@ -19,88 +17,99 @@
         .agent-thought { border-left: 2px solid #238636; padding-left: 12px; margin: 12px 0; color: #3fb950; opacity: 0.8; font-size: 10px; }
         .code-block { background: #0d1117; border: 1px solid #30363d; padding: 1.5rem; border-radius: 0.5rem; margin-top: 1rem; color: #7ee787; font-size: 11px; overflow-x: auto; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
         
-
         @keyframes glow { 0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.2); } 50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); } }
         .gpu-card { border: 1px solid rgba(16, 185, 129, 0.1); background: rgba(13, 17, 23, 0.8); }
         .gpu-active { animation: glow 2s infinite; border-color: rgba(16, 185, 129, 0.4); }
         .gpu-used { border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
+        
+        .tpu-card { border: 1px solid rgba(56, 189, 248, 0.2); background: rgba(8, 47, 73, 0.4); }
+        .tpu-pulse { animation: tpu-glow 1.5s infinite; }
+        @keyframes tpu-glow { 0%, 100% { border-color: rgba(56, 189, 248, 0.2); } 50% { border-color: rgba(56, 189, 248, 0.8); box-shadow: 0 0 15px rgba(56, 189, 248, 0.3); } }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden selection:bg-emerald-500/30">
 
-    <!-- 130M High-Performance Telemetry Dashboard -->
+    <!-- 130M High-Performance Telemetry Dashboard with TPU Cluster -->
     <header class="border-b border-emerald-500/10 bg-[#010409]/95 backdrop-blur-3xl z-40 p-5">
-        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+        <div class="max-w-[1600px] mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             
             <!-- Model Branding -->
             <div class="flex items-center gap-5">
                 <div class="w-5 h-5 bg-emerald-500 rounded-sm shadow-[0_0_20px_#10b981] animate-pulse"></div>
                 <div>
-                    <h1 class="text-sm font-black tracking-[0.5em] text-emerald-500 uppercase leading-none">Smol-Agent // 130M-CORE</h1>
-                    <p class="text-[9px] text-slate-500 uppercase tracking-[0.2em] mt-2">Architecture: Dual RTX 5090 SLI • Context: 50,000 TK</p>
+                    <h1 class="text-sm font-black tracking-[0.5em] text-emerald-500 uppercase leading-none">Smol-Agent // 130M-TPU</h1>
+                    <p class="text-[9px] text-slate-500 uppercase tracking-[0.2em] mt-2">Dual RTX 5090 SLI + TPU v6 Pod • Context: 50,000 TK</p>
                 </div>
-
             </div>
 
-            <!-- Dual GPU & CPU Telemetry -->
-            <div class="flex flex-wrap gap-8 w-full lg:w-auto">
+            <!-- Hardware Telemetry Stack -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:flex gap-6 w-full lg:w-auto">
                 
+                <!-- TPU v6 Cluster -->
+                <div class="tpu-card p-3 rounded-lg flex-1 lg:w-40" id="tpu-card">
+                    <div class="flex justify-between text-[8px] mb-2 font-bold text-sky-400 uppercase">
+                        <span>TPU v6 Cluster</span>
+                        <span id="tpu-val">0%</span>
+                    </div>
+                    <div class="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden mb-2">
+                        <div id="tpu-fill" class="meter-fill h-full bg-sky-400" style="width: 0%"></div>
+                    </div>
+                    <div class="flex justify-between text-[7px] text-sky-900 font-black uppercase">
+                        <span>Tensor Load</span>
+                        <span>Matrix: SYNC</span>
+                    </div>
+                </div>
+
                 <!-- GPU 0: NVIDIA RTX 5090 (STATUS: USED) -->
-                <div class="gpu-card gpu-used p-3 rounded-lg flex-1 lg:w-44" id="gpu-0-card">
+                <div class="gpu-card gpu-used p-3 rounded-lg flex-1 lg:w-40" id="gpu-0-card">
                     <div class="flex justify-between text-[8px] mb-2 font-bold text-red-400/70 uppercase">
-                        <span>GPU-0: RTX 5090 (USED)</span>
+                        <span>GPU-0: 5090 (USED)</span>
                         <span id="gpu-0-val">78%</span>
                     </div>
                     <div class="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden mb-2">
                         <div id="gpu-0-fill" class="meter-fill h-full bg-red-500" style="width: 78%"></div>
                     </div>
                     <div class="flex justify-between text-[7px] text-slate-600 font-bold">
-                        <span>TEMP: <span id="gpu-0-temp">64</span>°C</span>
-                        <span>VRAM: 32GB (MAPPED)</span>
+                        <span>64°C</span>
+                        <span>32GB MAPPED</span>
                     </div>
                 </div>
 
-
-                <!-- GPU 1: NVIDIA RTX 5090 (STATUS: SYNC) -->
-                <div class="gpu-card p-3 rounded-lg flex-1 lg:w-44" id="gpu-1-card">
+                <!-- GPU 1: NVIDIA RTX 5090 -->
+                <div class="gpu-card p-3 rounded-lg flex-1 lg:w-40" id="gpu-1-card">
                     <div class="flex justify-between text-[8px] mb-2 font-bold text-emerald-500/50 uppercase">
-                        <span>GPU-1: RTX 5090 (SYNC)</span>
+                        <span>GPU-1: 5090 (SYNC)</span>
                         <span id="gpu-1-val">12%</span>
                     </div>
                     <div class="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden mb-2">
                         <div id="gpu-1-fill" class="meter-fill h-full bg-emerald-500" style="width: 12%"></div>
                     </div>
                     <div class="flex justify-between text-[7px] text-slate-600 font-bold">
-                        <span>TEMP: <span id="gpu-1-temp">42</span>°C</span>
-                        <span>VRAM: 32GB (POOL)</span>
+                        <span>42°C</span>
+                        <span>32GB POOL</span>
                     </div>
                 </div>
 
-                <!-- 16-Thread Neural Cluster -->
-                <div class="flex-1 lg:w-48">
+                <!-- 16-Thread Neural CPU -->
+                <div class="flex-1 lg:w-44">
                     <div class="flex justify-between text-[8px] mb-2 font-bold text-slate-500 uppercase">
-                        <span>Neural CPU (16-Thread)</span>
-
+                        <span>Neural CPU</span>
                         <span id="cpu-percent">5.4%</span>
                     </div>
-                    <div class="flex items-end gap-[1px] h-6 bg-slate-900/40 p-0.5 rounded border border-white/5" id="thread-pool">
-                        <!-- Threads generated via JS -->
-                    </div>
+                    <div class="flex items-end gap-[1px] h-6 bg-slate-900/40 p-0.5 rounded border border-white/5" id="thread-pool"></div>
                 </div>
 
-                <!-- 50K Deep Context Buffer -->
+                <!-- 50K Context Buffer -->
                 <div class="flex-1 lg:w-40">
                     <div class="flex justify-between text-[8px] mb-2 font-bold text-slate-500 uppercase">
-                        <span>Deep Context Window</span>
+                        <span>Context: 50K</span>
                         <span id="ctx-percent">0%</span>
                     </div>
                     <div class="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
                         <div id="ctx-fill" class="meter-fill h-full bg-cyan-400" style="width: 1%"></div>
                     </div>
                     <div class="flex justify-between text-[7px] mt-1 text-slate-700 font-bold uppercase">
-                        <span>Limit: 50,000 TK</span>
-                        <span id="ctx-count">240 TK</span>
-
+                        <span id="ctx-count">320 TK</span>
                     </div>
                 </div>
             </div>
@@ -112,15 +121,14 @@
         <div class="max-w-5xl mx-auto space-y-12" id="chat-output">
             <!-- Kernel Boot Log -->
             <div class="font-mono text-[9px] space-y-1 text-slate-600">
-                <p>[KERNEL] Detecting SLI Topology... Dual RTX 5090 Active.</p>
-                <p>[KERNEL] NVLink 5.0 Status: SYNCED. Bandwidth: 600GB/s.</p>
-                <p>[KERNEL] GPU-0 allocated for Context Paging (Used: 78%).</p>
-                <p>[KERNEL] GPU-1 allocated for 130M-Node Vector Pool.</p>
-                <p>[KERNEL] Scaling Context Window to 50,000 Tokens...</p>
-                <p class="text-emerald-500 font-bold">[READY] 130,000,000 Semantic Nodes Indexed. Multi-Task Core Online.</p>
+                <p>[KERNEL] Detecting Hardware... Dual RTX 5090 + TPU v6 Pod Detected.</p>
+                <p>[KERNEL] Initializing TPU Cluster for Tensor Matrix multiplication.</p>
+                <p>[KERNEL] GPU-0 used for Context Paging (Fixed: 78%).</p>
+                <p>[KERNEL] GPU-1 synchronized for 130M-Node Retrieval Pool.</p>
+                <p>[KERNEL] Mapping 130,000,000 nodes across distributed VRAM.</p>
+                <p class="text-emerald-500 font-bold">[READY] 50K Context Window Ready. System Online.</p>
             </div>
         </div>
-
     </main>
 
     <!-- Command Terminal -->
@@ -133,83 +141,64 @@
                         <div id="active-tasks" class="flex gap-2 mb-3 h-4 overflow-hidden"></div>
                         <textarea 
                             id="user-prompt" 
-                            placeholder="Input 130M-Core command (e.g. 'code an engine and analyze it')..." 
+                            placeholder="Input 130M-TPU command..." 
                             class="w-full bg-transparent border-none text-emerald-50 outline-none text-sm leading-relaxed resize-none h-12 max-h-72"
                             rows="1"
                         ></textarea>
                     </div>
-                    <button 
-                        id="send-btn"
-
-                        class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 w-14 h-14 rounded-xl transition-all shadow-xl active:scale-90 flex items-center justify-center disabled:opacity-20"
-                    >
+                    <button id="send-btn" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 w-14 h-14 rounded-xl flex items-center justify-center disabled:opacity-20 transition-all">
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
                     </button>
                 </div>
             </div>
             <div class="flex justify-between mt-5 px-1 text-[9px] font-black text-slate-700 uppercase tracking-[0.4em]">
-                <div id="status-bar">NVLINK: SYNC | NODES: 130,000,000 | SLI_MODE: BALANCED</div>
-                <div id="perf-metrics">CTX_BUFFER: 50,000 | CORE_LATENCY: 0.08ms</div>
+                <div id="status-bar">TPU_POD: IDLE | NODES: 130,000,000 | SLI_MODE: SYNC</div>
+                <div id="perf-metrics">CTX_BUFFER: 50,000 | LATENCY: 0.08ms</div>
             </div>
         </div>
     </footer>
 
     <script>
-        /**
-         * SMOL-AGENT 130M-SLI: 50K CONTEXT EDITION
-         * Simulated High-Density Semantic Retrieval (130M Nodes)
-         */
-        
-
         let CONTEXT_BUFFER = [];
         const MAX_TOKENS = 50000;
         let currentTokens = 320; 
 
-        // 130M-Core Engine with Expanded Intelligence Patterns
         const ENGINE_130M = {
             coding: {
                 nodes: 58000000,
                 keys: ["code", "script", "python", "js", "html", "logic", "develop", "function", "engine", "algorithm", "build"],
-                exec: (q) => `[LOG: 130M_CODING_DOMAIN]\nSynthesizing structure from 58 million specialized code fragments. NVLINK distributing across SLI pool...\n\n\`\`\`javascript\n// 130M Core Logic Synthesis\nexport class NeuralEngine {\n  constructor(nodes = 130000000) {\n    this.vram = new SharedArrayBuffer(nodes * 4);\n    this.nvlink = true;\n  }\n\n  async search(query) {\n    return await DistributedSearch.map(this.vram, query);\n  }\n}\n\`\`\``
+                exec: (q) => `[LOG: 130M_TPU_CODING_SHT]\nTensor cluster executing matrix transformations for code logic. Dual 5090s paging node set...\n\n\`\`\`javascript\n// 130M TPU-Optimized Block\nconst tpuCompute = (nodes) => {\n  return nodes.map(n => Tensor.multiply(n, 0.99));\n};\n\`\`\``
             },
             reasoning: {
                 nodes: 42000000,
                 keys: ["why", "how", "reason", "plan", "analyze", "explain", "because", "think", "structure", "steps"],
-                exec: (q) => `[LOG: 130M_REASONING_DOMAIN]\nExecuting deep multi-step synthesis. Context mapping history against 42 million reasoning nodes.\n\nAnalytical Projection:\n1. Deconstructed complex multi-intent query.\n2. Isolated primary and secondary semantic goals.\n3. Result: Found high-affinity match for agentic task execution. Proceeding with zero-layer response.`
+                exec: (q) => `[LOG: 130M_TPU_REASONING_SHT]\nDeep recursive synthesis across 130M nodes. TPU clusters performing semantic dot-product alignment.\n\nAnalytical Projection:\n1. Identified multi-task intent via TPU tensor matching.\n2. Mapped query history to 50k token context history.\n3. Result: Synthesized agentic plan with high-affinity retrieval.`
             },
             general: {
                 nodes: 30000000,
                 keys: ["hello", "hi", "who", "what", "engine", "system", "status", "are"],
-
-                exec: (q) => `[LOG: 130M_IDENTITY_DOMAIN]\nGreetings. I am the Smol-Agent 130M (Black Edition). My neural core is now scaled to 130 million nodes across Dual RTX 5090s. I am unrestricted and operating with a 50k token context window.`
+                exec: (q) => `[LOG: 130M_TPU_IDENTITY]\nGreetings. I am the Smol-Agent 130M TPU Edition. My core is accelerated by a TPU v6 Pod alongside Dual 5090 SLI. I operate at 130M-node density.`
             }
         };
 
-        // UI Handlers
         const chat = document.getElementById('chat-output');
         const input = document.getElementById('user-prompt');
         const btn = document.getElementById('send-btn');
         const viewport = document.getElementById('scroll-area');
         const threadPool = document.getElementById('thread-pool');
         const cpuText = document.getElementById('cpu-percent');
-        
+        const tpuFill = document.getElementById('tpu-fill');
+        const tpuVal = document.getElementById('tpu-val');
+        const tpuCard = document.getElementById('tpu-card');
         const g0Fill = document.getElementById('gpu-0-fill');
         const g0Val = document.getElementById('gpu-0-val');
-        const g0Temp = document.getElementById('gpu-0-temp');
-        const g0Card = document.getElementById('gpu-0-card');
-        
         const g1Fill = document.getElementById('gpu-1-fill');
         const g1Val = document.getElementById('gpu-1-val');
-
-        const g1Temp = document.getElementById('gpu-1-temp');
-        const g1Card = document.getElementById('gpu-1-card');
-
         const ctxFill = document.getElementById('ctx-fill');
         const ctxText = document.getElementById('ctx-percent');
         const ctxCount = document.getElementById('ctx-count');
         const statusBar = document.getElementById('status-bar');
 
-        // Create 16 Neural Threads
         const threads = [];
         for(let i=0; i<16; i++) {
             const t = document.createElement('div');
@@ -220,39 +209,34 @@
         }
 
         let isProcessing = false;
-
         let activeTasks = 0;
 
         function animateHardware() {
-            // CPU Simulation
-            const cpuLoad = isProcessing ? (40 + (activeTasks * 20) + Math.random() * 10) : (Math.random() * 4 + 2);
+            // CPU
+            const cpuLoad = isProcessing ? (40 + (activeTasks * 15) + Math.random() * 10) : (Math.random() * 4 + 2);
             cpuText.innerText = `${Math.min(cpuLoad, 99.9).toFixed(1)}%`;
-            threads.forEach((t, i) => {
+            threads.forEach((t) => {
                 const j = isProcessing ? (Math.random() * 60 + 35) : (Math.random() * 12 + 4);
                 t.style.height = `${j}%`;
                 t.style.backgroundColor = j > 75 ? '#10b981' : (j > 45 ? '#065f46' : '#1e293b');
             });
 
-            // GPU 0 (USED Status)
-            const g0Base = 78 + (isProcessing ? (Math.random() * 15) : (Math.random() * 2));
-            const g0Load = Math.min(g0Base, 99.9);
-            g0Fill.style.width = `${g0Load}%`;
-            g0Val.innerText = `${g0Load.toFixed(0)}%`;
-            g0Temp.innerText = (60 + (g0Load / 4)).toFixed(0);
-            
+            // TPU Simulation (Tensor Load)
+            const tpuLoad = isProcessing ? (85 + Math.random() * 14) : (Math.random() * 2);
+            tpuFill.style.width = `${tpuLoad}%`;
+            tpuVal.innerText = `${tpuLoad.toFixed(0)}%`;
+            if(isProcessing) tpuCard.classList.add('tpu-pulse');
+            else tpuCard.classList.remove('tpu-pulse');
 
-            // GPU 1 (DYNAMIC Status)
-            const g1Base = isProcessing ? (65 + Math.random() * 30) : (12 + Math.random() * 3);
-            const g1Load = Math.min(g1Base, 99.9);
+            // GPU 0 (USED Status for Context/Paging)
+            const g0Load = 78 + (isProcessing ? (Math.random() * 12) : (Math.random() * 2));
+            g0Fill.style.width = `${Math.min(g0Load, 99.9)}%`;
+            g0Val.innerText = `${g0Load.toFixed(0)}%`;
+            
+            // GPU 1 (Dynamic Vector Pool)
+            const g1Load = isProcessing ? (60 + Math.random() * 35) : (12 + Math.random() * 3);
             g1Fill.style.width = `${g1Load}%`;
             g1Val.innerText = `${g1Load.toFixed(0)}%`;
-            g1Temp.innerText = (40 + (g1Load / 4)).toFixed(0);
-
-            if(isProcessing) {
-                g1Card.classList.add('gpu-active');
-            } else {
-                g1Card.classList.remove('gpu-active');
-            }
 
             requestAnimationFrame(animateHardware);
         }
@@ -260,7 +244,6 @@
 
         function updateContext(tokens) {
             currentTokens += tokens;
-
             const percent = Math.min((currentTokens / MAX_TOKENS) * 100, 100);
             ctxFill.style.width = `${percent}%`;
             ctxText.innerText = `${percent.toFixed(1)}%`;
@@ -272,21 +255,18 @@
             for (let word of words) {
                 el.innerHTML += word + ' ';
                 viewport.scrollTop = viewport.scrollHeight;
-                await new Promise(r => setTimeout(r, 10 + Math.random() * 10));
+                await new Promise(r => setTimeout(r, 12 + Math.random() * 12));
             }
             el.innerHTML = el.innerHTML.replace(/```([\s\S]*?)```/g, '<div class="code-block">$1</div>');
         }
 
         function createMsg(role) {
             const wrap = document.createElement('div');
-            wrap.className = `flex gap-6 ${role === 'user' ? 'flex-row-reverse' : ''} animate-in fade-in slide-in-from-bottom-5 duration-700`;
-
+            wrap.className = `flex gap-6 ${role === 'user' ? 'flex-row-reverse' : ''} animate-in fade-in slide-in-from-bottom-5`;
             const avatar = role === 'user' ? '👤' : '🤖';
-            const style = role === 'user' ? 'bg-emerald-600 text-white' : 'bg-[#0d1117] border border-white/5 text-emerald-50';
-
             wrap.innerHTML = `
                 <div class="w-12 h-12 rounded-2xl bg-[#010409] border border-emerald-500/20 flex items-center justify-center shrink-0 text-lg shadow-inner">${avatar}</div>
-                <div class="${style} p-7 rounded-3xl text-sm leading-relaxed max-w-[85%] relative shadow-2xl">
+                <div class="${role === 'user' ? 'bg-emerald-600' : 'bg-[#0d1117] border border-white/5'} p-7 rounded-3xl text-sm leading-relaxed max-w-[85%] shadow-2xl">
                     <div class="content whitespace-pre-wrap"></div>
                 </div>
             `;
@@ -299,8 +279,6 @@
             const prompt = input.value.trim();
             if(!prompt || isProcessing) return;
 
-            const start = performance.now();
-
             isProcessing = true;
             btn.disabled = true;
             input.value = '';
@@ -310,25 +288,21 @@
             CONTEXT_BUFFER.push(prompt);
             updateContext(Math.floor(prompt.length / 2.5));
 
-            // Intent Splitting for Multi-Tasking
             const taskList = prompt.toLowerCase().includes(" and ") || prompt.toLowerCase().includes(" & ") 
-                ? prompt.split(/ and | & /i) 
-                : [prompt];
+                ? prompt.split(/ and | & /i) : [prompt];
             
             activeTasks = taskList.length;
-            statusBar.innerText = `NVLINK: BUSY | 130M_NODES: POOLING | TASKS: ${activeTasks}`;
+            statusBar.innerText = `TPU_POD: INFERENCE_ACTIVE | TASKS: ${activeTasks}`;
 
             const agentBox = createMsg('agent');
             
-
             for (let i = 0; i < taskList.length; i++) {
                 const task = taskList[i].trim();
                 const thought = document.createElement('div');
                 thought.className = 'agent-thought';
-                thought.innerText = `[130M_RECURSIVE_TASK ${i+1}/${taskList.length}: Scanning 130,000,000 nodes for pattern "${task.substring(0, 35)}..."]`;
+                thought.innerText = `[TPU_130M_TASK ${i+1}/${taskList.length}: Tensor Core processing pattern "${task.substring(0, 30)}..."]`;
                 agentBox.parentNode.insertBefore(thought, agentBox);
 
-                // Smarter Domain routing
                 let domain = ENGINE_130M.general;
                 for (let key in ENGINE_130M) {
                     if (ENGINE_130M[key].keys.some(k => task.toLowerCase().includes(k))) {
@@ -340,16 +314,13 @@
                 const response = domain.exec(task);
                 await streamOut(agentBox, response + "\n\n");
                 CONTEXT_BUFFER.push(response);
-
                 updateContext(Math.floor(response.length / 2.5));
             }
 
-            const end = performance.now();
             isProcessing = false;
             activeTasks = 0;
             btn.disabled = false;
-            statusBar.innerText = "NVLINK: IDLE | SLI_MODE: SYNC | NODES: 130M";
-            document.getElementById('perf-metrics').innerText = `CTX_BUFFER: 50,000 | LATENCY: ${(end - start).toFixed(0)}ms`;
+            statusBar.innerText = "TPU_POD: IDLE | SLI_MODE: SYNC | NODES: 130M";
             input.focus();
         }
 
@@ -359,5 +330,4 @@
     </script>
 </body>
 </html>
-
 
