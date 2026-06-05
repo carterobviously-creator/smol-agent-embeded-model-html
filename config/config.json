@@ -1,0 +1,8 @@
+{
+  "task: create -r task.npm contain {
+node run {
+from html import index.html
+index -r call prompt =? {prompt:in}
+}
+}
+}
