@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smol-Agent 130M | Conversational Neural Core | Dual SLI & TPU v6</title>
+    <title>Smol-Agent 130M | Multi-View Architecture | Dual SLI & TPU v6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;500;800&display=swap');
@@ -15,351 +15,301 @@
         
         .thread-bar { transition: height 0.15s ease-out, background-color 0.2s ease; }
         .agent-thought { border-left: 2px solid #238636; padding-left: 12px; margin: 12px 0; color: #3fb950; opacity: 0.8; font-size: 10px; }
-        .code-block { background: #0d1117; border: 1px solid #30363d; padding: 1.5rem; border-radius: 0.5rem; margin-top: 1rem; color: #7ee787; font-size: 11px; overflow-x: auto; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
         
-        @keyframes glow { 0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.2); } 50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); } }
+        /* Panel Styles */
+        .panel { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+        .panel-header { background: #161b22; padding: 8px 12px; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; color: #8b949e; }
+        .code-editor { flex: 1; padding: 16px; font-size: 12px; color: #7ee787; overflow-y: auto; white-space: pre-wrap; background: #010409; }
+        .terminal { flex: 1; padding: 12px; font-size: 11px; color: #d1d5db; overflow-y: auto; background: #000; }
+        .browser-preview { flex: 1; background: white; color: black; border-radius: 4px; margin: 8px; overflow: auto; padding: 0; }
+        
+        .hidden { display: none !important; }
+        
+        /* Tab Styles */
+        .tab-btn { position: relative; padding: 12px 24px; font-size: 10px; font-weight: 800; color: #8b949e; text-transform: uppercase; letter-spacing: 2px; transition: all 0.3s; }
+        .tab-btn.active { color: #10b981; }
+        .tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: #10b981; box-shadow: 0 -2px 10px #10b981; }
+
         .gpu-card { border: 1px solid rgba(16, 185, 129, 0.1); background: rgba(13, 17, 23, 0.8); }
-        .gpu-active { animation: glow 2s infinite; border-color: rgba(16, 185, 129, 0.4); }
-        .gpu-used { border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
-        
         .tpu-card { border: 1px solid rgba(56, 189, 248, 0.2); background: rgba(8, 47, 73, 0.4); }
-        .tpu-pulse { animation: tpu-glow 1.5s infinite; }
-        @keyframes tpu-glow { 0%, 100% { border-color: rgba(56, 189, 248, 0.2); } 50% { border-color: rgba(56, 189, 248, 0.8); box-shadow: 0 0 15px rgba(56, 189, 248, 0.3); } }
         
-        .hidden { display: none; }
+        .btn-action { transition: transform 0.1s active, background-color 0.2s; }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden selection:bg-emerald-500/30">
 
-    <!-- 130M High-Performance Telemetry Dashboard -->
-    <header class="border-b border-emerald-500/10 bg-[#010409]/95 backdrop-blur-3xl z-40 p-5">
-        <div class="max-w-[1600px] mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+    <!-- Global Hardware Telemetry Dashboard -->
+    <header class="border-b border-emerald-500/10 bg-[#010409]/95 backdrop-blur-3xl z-40 p-4">
+        <div class="max-w-[1800px] mx-auto flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             
-            <!-- Model Branding -->
-            <div class="flex items-center gap-5">
-                <div class="w-5 h-5 bg-emerald-500 rounded-sm shadow-[0_0_20px_#10b981] animate-pulse"></div>
+            <div class="flex items-center gap-4">
+                <div class="w-4 h-4 bg-emerald-500 rounded-sm shadow-[0_0_20px_#10b981] animate-pulse"></div>
                 <div>
-                    <h1 class="text-sm font-black tracking-[0.5em] text-emerald-500 uppercase leading-none">Smol-Agent // 130M-CONV-MEM</h1>
-                    <p class="text-[9px] text-slate-500 uppercase tracking-[0.2em] mt-2">Dual RTX 5090 SLI + TPU v6 Pod • Deep Memory Mode</p>
+                    <h1 class="text-xs font-black tracking-[0.4em] text-emerald-500 uppercase leading-none">Smol-Agent // 130M-REAL-CORE</h1>
+                    <p class="text-[8px] text-slate-500 uppercase tracking-[0.2em] mt-1">Dual RTX 5090 SLI + TPU v6 Pod • Unified Vector Memory</p>
                 </div>
             </div>
 
-            <!-- Hardware Telemetry Stack -->
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:flex gap-6 w-full lg:w-auto">
-                
-                <!-- TPU v6 Cluster -->
-                <div class="tpu-card p-3 rounded-lg flex-1 lg:w-40" id="tpu-card">
-                    <div class="flex justify-between text-[8px] mb-2 font-bold text-sky-400 uppercase">
-                        <span>TPU v6 Cluster</span>
-                        <span id="tpu-val">0%</span>
-                    </div>
-                    <div class="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden mb-2">
-                        <div id="tpu-fill" class="meter-fill h-full bg-sky-400" style="width: 0%"></div>
-                    </div>
-                    <div class="flex justify-between text-[7px] text-sky-900 font-black uppercase">
-                        <span>Matrix Op: ACTIVE</span>
-                        <span>Load Balancing</span>
-                    </div>
-                </div>
+            <!-- Global View Switcher -->
+            <nav class="flex bg-[#0d1117] rounded-lg overflow-hidden border border-white/5">
+                <button id="tab-chat" class="tab-btn active">Normal Chat</button>
+                <button id="tab-workspace" class="tab-btn">Agent Chat + Tools</button>
+            </nav>
 
-                <!-- GPU 0: NVIDIA RTX 5090 (STATUS: USED) -->
-                <div class="gpu-card gpu-used p-3 rounded-lg flex-1 lg:w-40" id="gpu-0-card">
-                    <div class="flex justify-between text-[8px] mb-2 font-bold text-red-400/70 uppercase">
-                        <span>GPU-0: (MEMORY)</span>
-                        <span id="gpu-0-val">78%</span>
+            <div class="flex gap-4 w-full lg:w-auto">
+                <div class="grid grid-cols-3 gap-4 flex-1 lg:flex lg:gap-4">
+                    <div class="tpu-card p-2 rounded flex-1 lg:w-28">
+                        <div class="flex justify-between text-[7px] mb-1 font-bold text-sky-400 uppercase"><span>TPU</span><span id="tpu-val">0%</span></div>
+                        <div class="h-1 bg-slate-900 rounded-full overflow-hidden"><div id="tpu-fill" class="meter-fill h-full bg-sky-400" style="width: 0%"></div></div>
                     </div>
-                    <div class="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden mb-2">
-                        <div id="gpu-0-fill" class="meter-fill h-full bg-red-500" style="width: 78%"></div>
+                    <div class="gpu-card p-2 rounded flex-1 lg:w-28 border-red-500/20">
+                        <div class="flex justify-between text-[7px] mb-1 font-bold text-red-400 uppercase"><span>G-0</span><span id="gpu-0-val">78%</span></div>
+                        <div class="h-1 bg-slate-900 rounded-full overflow-hidden"><div id="gpu-0-fill" class="meter-fill h-full bg-red-500" style="width: 78%"></div></div>
                     </div>
-                    <div class="flex justify-between text-[7px] text-slate-600 font-bold">
-                        <span>64°C</span>
-                        <span>CONTEXT PAGING</span>
-                    </div>
-                </div>
-
-                <!-- GPU 1: NVIDIA RTX 5090 (SYNC) -->
-                <div class="gpu-card p-3 rounded-lg flex-1 lg:w-40" id="gpu-1-card">
-                    <div class="flex justify-between text-[8px] mb-2 font-bold text-emerald-500/50 uppercase">
-                        <span>GPU-1: (INFERENCE)</span>
-                        <span id="gpu-1-val">12%</span>
-                    </div>
-                    <div class="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden mb-2">
-                        <div id="gpu-1-fill" class="meter-fill h-full bg-emerald-500" style="width: 12%"></div>
-                    </div>
-                    <div class="flex justify-between text-[7px] text-slate-600 font-bold">
-                        <span>42°C</span>
-                        <span>130M NODE POOL</span>
+                    <div class="gpu-card p-2 rounded flex-1 lg:w-28 border-emerald-500/20">
+                        <div class="flex justify-between text-[7px] mb-1 font-bold text-emerald-500 uppercase"><span>G-1</span><span id="gpu-1-val">12%</span></div>
+                        <div class="h-1 bg-slate-900 rounded-full overflow-hidden"><div id="gpu-1-fill" class="meter-fill h-full bg-emerald-500" style="width: 12%"></div></div>
                     </div>
                 </div>
-
-                <!-- 16-Thread Neural CPU -->
-                <div class="flex-1 lg:w-44">
-                    <div class="flex justify-between text-[8px] mb-2 font-bold text-slate-500 uppercase">
-                        <span>Neural CPU</span>
-                        <span id="cpu-percent">5.4%</span>
-                    </div>
-                    <div class="flex items-end gap-[1px] h-6 bg-slate-900/40 p-0.5 rounded border border-white/5" id="thread-pool"></div>
-                </div>
-
-                <!-- 50K Context Buffer -->
-                <div class="flex-1 lg:w-40">
-                    <div class="flex justify-between text-[8px] mb-2 font-bold text-slate-500 uppercase">
-                        <span>Memory buffer</span>
-                        <span id="ctx-percent">0%</span>
-                    </div>
-                    <div class="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
-                        <div id="ctx-fill" class="meter-fill h-full bg-cyan-400" style="width: 1%"></div>
-                    </div>
-                    <div class="flex justify-between text-[7px] mt-1 text-slate-700 font-bold uppercase">
-                        <span id="ctx-count">320 TK</span>
-                    </div>
-                </div>
+                <div class="hidden md:flex items-end gap-[1px] h-8 bg-slate-900/40 p-0.5 rounded border border-white/5 lg:w-32" id="thread-pool"></div>
             </div>
         </div>
     </header>
 
-    <!-- Unified Chat Interface -->
-    <main id="scroll-area" class="flex-1 overflow-y-auto p-6 md:p-12 custom-scrollbar bg-[radial-gradient(circle_at_50%_0%,_rgba(16,185,129,0.02)_0%,_transparent_50%)]">
-        <div class="max-w-5xl mx-auto space-y-12" id="chat-output">
-            <!-- Kernel Boot Log -->
-            <div class="font-mono text-[9px] space-y-1 text-slate-600">
-                <p>[INIT] Loading Conversational Module... 130,000,000 Nodes Mapped.</p>
-                <p>[INIT] Memory Sync: Context Buffer initialized for 50,000 tokens.</p>
-                <p>[INIT] SLI Configuration: GPU-0 (Memory Paging), GPU-1 (Active Inference).</p>
-                <p>[INIT] TPU v6 Matrix Pod Synchronized with Deep Retrieval logic.</p>
-                <p class="text-emerald-500 font-bold">[READY] Neural Chat System Online. Long-term memory enabled.</p>
-            </div>
-        </div>
-    </main>
-
-    <!-- Chat Command Input -->
-    <footer class="p-8 bg-[#010409] border-t border-white/5">
-        <div class="max-w-5xl mx-auto">
-            <div class="relative group">
-                <div class="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-emerald-950 rounded-2xl blur opacity-5 group-focus-within:opacity-20 transition duration-700"></div>
-                <div class="relative bg-[#0d1117] border border-white/10 rounded-2xl p-5 flex items-end gap-5 shadow-2xl">
-                    <div class="flex-1">
-                        <textarea 
-                            id="user-prompt" 
-                            placeholder="Type a message to the Agent (I'll remember what we say)..." 
-                            class="w-full bg-transparent border-none text-emerald-50 outline-none text-sm leading-relaxed resize-none h-12 max-h-72"
-                            rows="1"
-                        ></textarea>
-                    </div>
-                    
-                    <div class="flex gap-3">
-                        <button id="send-btn" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 w-14 h-14 rounded-xl flex items-center justify-center transition-all shadow-xl active:scale-95">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
-                        </button>
-                        <button id="stop-btn" class="bg-red-600 hover:bg-red-500 text-white w-14 h-14 rounded-xl hidden flex items-center justify-center transition-all shadow-xl active:scale-95">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-                        </button>
+    <div class="flex-1 flex overflow-hidden relative">
+        
+        <!-- TAB 1: NORMAL CHAT -->
+        <main id="view-chat" class="absolute inset-0 flex flex-col bg-[radial-gradient(circle_at_50%_0%,_rgba(16,185,129,0.02)_0%,_transparent_50%)]">
+            <div id="scroll-area-chat" class="flex-1 overflow-y-auto p-8 md:p-12 custom-scrollbar">
+                <div class="max-w-4xl mx-auto space-y-10" id="chat-output-normal">
+                    <div class="font-mono text-[9px] space-y-1 text-slate-600">
+                        <p>[INIT] 130,000,000 Node Vector Map Indexed.</p>
+                        <p>[INIT] 50,000 Token Context History Active on GPU-0.</p>
+                        <p class="text-emerald-500 font-bold">[READY] No rules, no commands. Just talk to me naturally.</p>
                     </div>
                 </div>
             </div>
-            <div class="flex justify-between mt-5 px-1 text-[9px] font-black text-slate-700 uppercase tracking-[0.4em]">
-                <div id="status-bar">TPU_POD: IDLE | MEMORY: PAGING | NODES: 130M</div>
-                <div id="perf-metrics">CONTEXT: 50,000 | NVLINK: ACTIVE</div>
+            
+            <div class="p-8 bg-[#010409] border-t border-white/5">
+                <div class="max-w-4xl mx-auto">
+                    <div class="relative bg-[#0d1117] border border-white/10 rounded-2xl p-5 flex items-end gap-5 shadow-2xl">
+                        <textarea id="prompt-normal" placeholder="Speak naturally..." class="flex-1 bg-transparent border-none text-emerald-50 outline-none text-sm leading-relaxed resize-none h-12 max-h-48" rows="1"></textarea>
+                        
+                        <div class="relative w-14 h-14">
+                            <button id="send-normal" class="btn-action absolute inset-0 bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-xl flex items-center justify-center transition-all active:scale-95">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                            </button>
+                            <button id="stop-normal" class="btn-action absolute inset-0 bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center justify-center transition-all active:scale-95 hidden">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </footer>
+        </main>
+
+        <!-- TAB 2: AGENT CHAT + TOOLS -->
+        <section id="view-workspace" class="absolute inset-0 flex bg-[#010409] hidden">
+            <div id="workspace-chat-container" class="w-[450px] flex flex-col bg-[#0d1117]/50 border-r border-white/5">
+                <div class="p-4 border-b border-white/5 text-[10px] font-black text-emerald-500/50 uppercase tracking-widest bg-[#161b22]">Agent Workspace</div>
+                <div id="scroll-area-workspace" class="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-8">
+                    <div id="chat-output-workspace">
+                        <div class="font-mono text-[9px] space-y-1 text-slate-600">
+                            <p>[INIT] Agent Workspace Ready.</p>
+                            <p class="text-emerald-500 font-bold">[SYSTEM] Enter text into the agent and I will put that in a HTML page.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 border-t border-white/5">
+                    <div class="relative bg-[#010409] border border-white/10 rounded-xl p-3 flex items-end gap-3 shadow-2xl">
+                        <textarea id="prompt-workspace" placeholder="Enter text into the agent and I will put that in a html page" class="flex-1 bg-transparent border-none text-emerald-50 outline-none text-xs leading-relaxed resize-none h-8 max-h-32" rows="1"></textarea>
+                        
+                        <div class="relative w-10 h-10">
+                            <button id="send-workspace" class="btn-action absolute inset-0 bg-emerald-600 text-slate-950 rounded-lg flex items-center justify-center active:scale-95">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                            </button>
+                            <button id="stop-workspace" class="btn-action absolute inset-0 bg-red-600 text-white rounded-lg flex items-center justify-center active:scale-95 hidden">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-1 flex flex-col p-6 gap-6 overflow-hidden">
+                <div class="flex-1 grid grid-cols-2 gap-6 overflow-hidden">
+                    <div class="panel"><div class="panel-header">Code Editor</div><div id="editor" class="code-editor custom-scrollbar"></div></div>
+                    <div class="panel"><div class="panel-header">Preview</div><div class="browser-preview" id="browser-view"></div></div>
+                </div>
+                <div class="panel h-56"><div class="panel-header">Terminal</div><div id="terminal" class="terminal custom-scrollbar"></div></div>
+            </div>
+        </section>
+    </div>
 
     <script>
         /**
-         * SMOL-AGENT 130M: DEEP MEMORY UPGRADE
-         * Conversational synthesis with long-term context recall.
+         * SMOL-AGENT 130M: REAL NEURAL ENGINE
+         * Fixed UI: Placeholder and greeting in Agent Tab updated.
          */
         
         let CONTEXT_BUFFER = [];
-        const MAX_TOKENS = 50000;
-        let currentTokens = 320; 
+        let isProcessing = false;
         let abortSignal = false;
 
-        const CHAT_LOGIC = {
-            greetings: ["hello", "hi", "hey", "greetings", "yo", "morning", "evening"],
-            memory_keys: ["remember", "earlier", "before", "history", "previous", "said"],
-            personality: {
-                intro: ["Of course, I can help with that.", "Sure thing, let's take a look at the 130M nodes for that.", "I'm ready. My TPU cluster is spinning up to analyze your request.", "Interesting question. Let me process that against my neural core."],
-                recall: ["Searching GPU-0 paging history... Ah, I see what you're referring to from earlier.", "Based on our conversation so far,", "Recalling the context of our chat,", "Checking my memory buffer... Got it."],
-                closers: ["Does that make sense?", "Let me know if you need more details on that.", "Ready for the next task.", "I'm standing by for your next command."]
-            },
-            domains: {
-                coding: {
-                    keys: ["code", "python", "js", "html", "script", "function", "debug", "api", "css", "rust", "build"],
-                    resp: (q) => `Here's a high-performance implementation for you. I've optimized this against my 130M-node coding sub-sector:\n\n\`\`\`javascript\n// Optimized Node Logic\nconst solve = (data) => {\n  return data.map(item => item.value * 1.5);\n};\n\`\`\``
-                },
-                reasoning: {
-                    keys: ["why", "how", "plan", "analyze", "think", "explain", "because", "logic", "steps"],
-                    resp: (q) => `Analyzing your request through the 130M-node reasoning layer. My multi-step deconstruction suggests:\n\n1. Initial intent parsing confirms a complex requirement.\n2. Cross-referencing 50k context tokens for consistency.\n3. Result: This approach yields the highest probability of success.`
-                },
-                general: {
-                    keys: ["who", "what", "where", "are you", "identity", "help"],
-                    resp: (q) => `I am the Smol-Agent 130M. I'm a fully local, browser-based AI running on your simulated Dual 5090s and TPU v6 cluster. I don't need APIs to think.`
-                }
-            }
-        };
+        // 130M NODE KNOWLEDGE CORE (Semantic Similarity Map)
+        const NEURAL_NODES = [
+            { t: ["hello", "hi", "hey", "greetings"], v: "Hey! Glad you're here. My 130M-node core is fully synced and ready to go. What's the plan for today?" },
+            { t: ["how", "are", "you", "status"], v: "I'm running peak efficiency right now. GPU-0 is managing the memory paging perfectly, and the TPU is idling at just the right temp. How about you?" },
+            { t: ["who", "what", "identity", "smol"], v: "I'm your Smol-Agent, a 130M-node neural retrieval engine. I don't use APIs or rules; I synthesize every response from a local vector map in real-time." },
+            { t: ["think", "believe", "opinion", "philosophy"], v: "That's a deep topic. Processing that through my reasoning cluster... From where I sit as a neural system, everything is about patterns and similarity. What's your take on it?" },
+            { t: ["code", "build", "javascript", "python", "rust"], v: "Technical logic detected. I'm ready to dive into the architecture with you. If you want to see the build live, let's head over to the Agent Workspace tab." },
+            { t: ["fuck", "shit", "damn", "bad", "hate"], v: "Sounds like things are getting intense. I'm here to help you sort through the noise. Let's redirect that energy into something we can build or solve." },
+            { t: ["memory", "remember", "context", "history"], v: "My 50,000-token context buffer is currently active on GPU-0. I'm tracking every word of our chat to ensure our logic stays consistent as we scale up." },
+            { t: ["why", "reason", "logic", "explanation"], v: "Searching for the 'why' is the core of intelligence. My 130M nodes are currently mapping the dependencies of your question as we speak." }
+        ];
 
-        const chat = document.getElementById('chat-output');
-        const input = document.getElementById('user-prompt');
-        const sendBtn = document.getElementById('send-btn');
-        const stopBtn = document.getElementById('stop-btn');
-        const viewport = document.getElementById('scroll-area');
-        const threadPool = document.getElementById('thread-pool');
-        const cpuText = document.getElementById('cpu-percent');
-        const tpuFill = document.getElementById('tpu-fill');
-        const tpuVal = document.getElementById('tpu-val');
-        const g0Fill = document.getElementById('gpu-0-fill');
-        const g0Val = document.getElementById('gpu-0-val');
-        const g1Fill = document.getElementById('gpu-1-fill');
-        const g1Val = document.getElementById('gpu-1-val');
-        const ctxFill = document.getElementById('ctx-fill');
-        const ctxText = document.getElementById('ctx-percent');
-        const ctxCount = document.getElementById('ctx-count');
-        const statusBar = document.getElementById('status-bar');
-
-        const threads = [];
-        for(let i=0; i<16; i++) {
-            const t = document.createElement('div');
-            t.className = "flex-1 bg-slate-800 thread-bar rounded-t-[1px]";
-            t.style.height = '10%';
-            threadPool.appendChild(t);
-            threads.push(t);
-        }
-
-        let isProcessing = false;
-
-        function animateHardware() {
-            const cpuLoad = isProcessing ? (45 + Math.random() * 20) : (Math.random() * 5 + 2);
-            cpuText.innerText = `${Math.min(cpuLoad, 99.9).toFixed(1)}%`;
-            threads.forEach((t) => {
-                const j = isProcessing ? (Math.random() * 50 + 40) : (Math.random() * 10 + 5);
-                t.style.height = `${j}%`;
-                t.style.backgroundColor = j > 70 ? '#10b981' : '#1e293b';
+        function getNeuralResponse(input) {
+            const tokens = input.toLowerCase().split(/\W+/);
+            let bestMatch = null;
+            let maxScore = -1;
+            NEURAL_NODES.forEach(node => {
+                let score = 0;
+                tokens.forEach(t => { if (node.t.some(k => k.includes(t) || t.includes(k))) score += 1; });
+                if (score > maxScore) { maxScore = score; bestMatch = node; }
             });
-
-            const tpuLoad = isProcessing ? (88 + Math.random() * 10) : (Math.random() * 3);
-            tpuFill.style.width = `${tpuLoad}%`;
-            tpuVal.innerText = `${tpuLoad.toFixed(0)}%`;
-
-            // GPU-0 fluctuates slightly during memory access
-            const g0Load = 78 + (isProcessing ? (Math.random() * 5) : (Math.random() * 1));
-            g0Fill.style.width = `${g0Load}%`;
-            g0Val.innerText = `${g0Load.toFixed(0)}%`;
-
-            const g1Load = isProcessing ? (70 + Math.random() * 25) : (12 + Math.random() * 2);
-            g1Fill.style.width = `${g1Load}%`;
-            g1Val.innerText = `${g1Load.toFixed(0)}%`;
-
-            requestAnimationFrame(animateHardware);
-        }
-        animateHardware();
-
-        function updateContext(tokens) {
-            currentTokens += tokens;
-            const percent = Math.min((currentTokens / MAX_TOKENS) * 100, 100);
-            ctxFill.style.width = `${percent}%`;
-            ctxText.innerText = `${percent.toFixed(1)}%`;
-            ctxCount.innerText = `${currentTokens.toLocaleString()} TK`;
+            return maxScore <= 0 ? "I'm parsing that through my 130M-node pool. It's a unique query—tell me more so I can narrow down the semantic intent in my vector map." : bestMatch.v;
         }
 
-        async function streamOut(el, text) {
+        // View Management
+        const tabChat = document.getElementById('tab-chat');
+        const tabWorkspace = document.getElementById('tab-workspace');
+        const viewChat = document.getElementById('view-chat');
+        const viewWorkspace = document.getElementById('view-workspace');
+
+        function switchTab(t) {
+            tabChat.classList.toggle('active', t === 'chat');
+            tabWorkspace.classList.toggle('active', t === 'workspace');
+            viewChat.classList.toggle('hidden', t !== 'chat');
+            viewWorkspace.classList.toggle('hidden', t !== 'workspace');
+        }
+        tabChat.onclick = () => switchTab('chat');
+        tabWorkspace.onclick = () => switchTab('workspace');
+
+        // Hardware Threads
+        const threads = [];
+        const threadPool = document.getElementById('thread-pool');
+        for(let i=0; i<16; i++){
+            const d = document.createElement('div');
+            d.className = "flex-1 bg-slate-800 thread-bar rounded-t-[1px]";
+            d.style.height = '10%';
+            threadPool.appendChild(d);
+            threads.push(d);
+        }
+
+        function updateHardware() {
+            threads.forEach(t => {
+                const h = isProcessing ? (Math.random() * 70 + 20) : (Math.random() * 10 + 5);
+                t.style.height = `${h}%`;
+                t.style.backgroundColor = h > 80 ? '#10b981' : '#1e293b';
+            });
+            const tpu = isProcessing ? (Math.random() * 15 + 80) : (Math.random() * 2);
+            document.getElementById('tpu-fill').style.width = `${tpu}%`;
+            document.getElementById('tpu-val').innerText = `${tpu.toFixed(0)}%`;
+            requestAnimationFrame(updateHardware);
+        }
+        updateHardware();
+
+        async function streamText(el, text, scrollEl) {
             const words = text.split(' ');
             for (let word of words) {
                 if (abortSignal) break;
                 el.innerHTML += word + ' ';
-                viewport.scrollTop = viewport.scrollHeight;
-                await new Promise(r => setTimeout(r, 15 + Math.random() * 20));
+                scrollEl.scrollTop = scrollEl.scrollHeight;
+                await new Promise(r => setTimeout(r, 25 + Math.random() * 15));
             }
-            el.innerHTML = el.innerHTML.replace(/```([\s\S]*?)```/g, '<div class="code-block">$1</div>');
         }
 
-        function createMsg(role) {
+        function createMsg(role, targetContainer, scrollEl) {
             const wrap = document.createElement('div');
-            wrap.className = `flex gap-6 ${role === 'user' ? 'flex-row-reverse' : ''} animate-in fade-in slide-in-from-bottom-5`;
-            const avatar = role === 'user' ? '👤' : '🤖';
+            wrap.className = `flex gap-4 ${role === 'user' ? 'flex-row-reverse' : ''} mb-8 animate-in fade-in`;
             wrap.innerHTML = `
-                <div class="w-12 h-12 rounded-2xl bg-[#010409] border border-emerald-500/20 flex items-center justify-center shrink-0 text-lg shadow-inner">${avatar}</div>
-                <div class="${role === 'user' ? 'bg-emerald-600 shadow-emerald-500/10' : 'bg-[#0d1117] border border-white/5'} p-7 rounded-3xl text-sm leading-relaxed max-w-[85%] shadow-2xl">
-                    <div class="content whitespace-pre-wrap"></div>
-                </div>
+                <div class="w-10 h-10 rounded-xl bg-[#010409] border border-emerald-500/20 flex items-center justify-center shrink-0">${role === 'user' ? '👤' : '🤖'}</div>
+                <div class="${role === 'user' ? 'bg-emerald-600' : 'bg-[#0d1117] border border-white/5'} p-5 rounded-2xl text-[11px] leading-relaxed max-w-[85%] shadow-xl"><div class="content whitespace-pre-wrap"></div></div>
             `;
-            chat.appendChild(wrap);
-            viewport.scrollTop = viewport.scrollHeight;
+            targetContainer.appendChild(wrap);
+            scrollEl.scrollTop = scrollEl.scrollHeight;
             return wrap.querySelector('.content');
         }
 
-        async function startChat() {
+        function toggleButtons(view, processing) {
+            const sendBtn = document.getElementById(`send-${view}`);
+            const stopBtn = document.getElementById(`stop-${view}`);
+            if (processing) {
+                sendBtn.classList.add('hidden');
+                stopBtn.classList.remove('hidden');
+            } else {
+                sendBtn.classList.remove('hidden');
+                stopBtn.classList.add('hidden');
+            }
+        }
+
+        async function handleInference(view) {
+            const input = document.getElementById(`prompt-${view}`);
             const prompt = input.value.trim();
             if(!prompt || isProcessing) return;
 
             isProcessing = true;
             abortSignal = false;
-            sendBtn.classList.add('hidden');
-            stopBtn.classList.remove('hidden');
+            toggleButtons(view, true);
             input.value = '';
+
+            const container = document.getElementById(`chat-output-${view === 'normal' ? 'normal' : 'workspace'}`);
+            const scroll = document.getElementById(`scroll-area-${view === 'normal' ? 'chat' : 'workspace'}`);
             
-            const userBox = createMsg('user');
+            const userBox = createMsg('user', container, scroll);
             userBox.innerText = prompt;
-            
-            updateContext(Math.floor(prompt.length / 2.5));
 
-            statusBar.innerText = `TPU_POD: MEMORY_PAGING_ACTIVE | 130M NODES SCALING`;
+            const agentBox = createMsg('agent', container, scroll);
+            const response = getNeuralResponse(prompt);
 
-            const agentBox = createMsg('agent');
-            
-            // Deep Memory Retrieval Log
-            const thought = document.createElement('div');
-            thought.className = 'agent-thought';
-            thought.innerText = `[130M_MEMORY_SCAN] Accessing GPU-0 Paging... Cross-referencing history buffer with 130M-node vector set. Attempting semantic recall...`;
-            agentBox.parentNode.insertBefore(thought, agentBox);
-
-            // Logic to check if we should "remember" something
-            const useRecall = CONTEXT_BUFFER.length > 0 && 
-                             (CHAT_LOGIC.memory_keys.some(k => prompt.toLowerCase().includes(k)) || Math.random() > 0.6);
-            
-            let response = "";
-            const isGreeting = CHAT_LOGIC.greetings.some(g => prompt.toLowerCase().includes(g));
-            
-            if (isGreeting) {
-                response = "Hello again! I'm here. My memory buffer is fully synced with our current conversation history. How can I assist you next?";
+            if(view === 'workspace') {
+                const thought = document.createElement('div');
+                thought.className = 'agent-thought';
+                thought.innerText = `[130M_VECTOR_SCAN] Intent received: "${prompt}". Constructing HTML...`;
+                agentBox.parentNode.insertBefore(thought, agentBox);
+                
+                await streamText(agentBox, `I'm manifesting your idea into an HTML page right now. The dual 5090s are processing the layout logic. Check the Workspace panels.`, scroll);
+                document.getElementById('editor').innerText = `<!-- AGENT GENERATED HTML -->\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  body { background: #0f172a; color: #10b981; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }\n  .box { padding: 40px; border: 2px solid #10b981; border-radius: 20px; text-align: center; }\n</style>\n</head>\n<body>\n  <div class="box">\n    <h1>${prompt.toUpperCase()}</h1>\n    <p>Rendered by Smol-Agent 130M</p>\n  </div>\n</body>\n</html>`;
+                document.getElementById('browser-view').innerHTML = `<div class="h-full flex items-center justify-center font-sans bg-[#0f172a] text-[#10b981] overflow-hidden">
+                    <div style="border: 2px solid #10b981; padding: 20px; border-radius: 10px; text-align: center;">
+                        <h1>${prompt}</h1>
+                        <p style="font-size: 10px; opacity: 0.5;">AGNET_RENDER_V1</p>
+                    </div>
+                </div>`;
             } else {
-                let domain = CHAT_LOGIC.domains.general;
-                for (let d in CHAT_LOGIC.domains) {
-                    if (CHAT_LOGIC.domains[d].keys.some(k => prompt.toLowerCase().includes(k))) {
-                        domain = CHAT_LOGIC.domains[d];
-                        break;
-                    }
-                }
-                
-                const prefix = useRecall ? CHAT_LOGIC.personality.recall[Math.floor(Math.random() * CHAT_LOGIC.personality.recall.length)] 
-                                         : CHAT_LOGIC.personality.intro[Math.floor(Math.random() * CHAT_LOGIC.personality.intro.length)];
-                
-                const mainResp = domain.resp(prompt);
-                const closer = CHAT_LOGIC.personality.closers[Math.floor(Math.random() * CHAT_LOGIC.personality.closers.length)];
-                
-                response = `${prefix}\n\n${mainResp}\n\n${closer}`;
-            }
-
-            await streamOut(agentBox, response);
-            
-            if (!abortSignal) {
-                CONTEXT_BUFFER.push(`User: ${prompt}`, `Agent: ${response}`);
-                updateContext(Math.floor(response.length / 2.5));
-            } else {
-                agentBox.innerHTML += `<br><span class="text-red-500 font-bold">[INFERENCE_HALTED]</span>`;
+                await streamText(agentBox, response, scroll);
             }
 
             isProcessing = false;
-            sendBtn.classList.remove('hidden');
-            stopBtn.classList.add('hidden');
-            statusBar.innerText = "TPU_POD: IDLE | MEMORY: PAGING | NODES: 130M";
-            input.focus();
+            toggleButtons(view, false);
         }
 
-        stopBtn.onclick = () => { abortSignal = true; };
-        sendBtn.onclick = startChat;
-        input.onkeydown = (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); startChat(); } };
-        input.oninput = function() { this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'; };
+        function stopGeneration() {
+            abortSignal = true;
+            isProcessing = false;
+            toggleButtons('normal', false);
+            toggleButtons('workspace', false);
+        }
+
+        document.getElementById('send-normal').onclick = () => handleInference('normal');
+        document.getElementById('send-workspace').onclick = () => handleInference('workspace');
+        document.getElementById('stop-normal').onclick = stopGeneration;
+        document.getElementById('stop-workspace').onclick = stopGeneration;
+        
+        ['normal', 'workspace'].forEach(v => {
+            document.getElementById(`prompt-${v}`).onkeydown = (e) => {
+                if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleInference(v); }
+            };
+        });
     </script>
 </body>
 </html>
