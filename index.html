@@ -34,6 +34,10 @@
         .tpu-card { border: 1px solid rgba(56, 189, 248, 0.2); background: rgba(8, 47, 73, 0.4); }
         
         .btn-action { transition: transform 0.1s active, background-color 0.2s; }
+        
+        /* Image Gen Specifics */
+        .canvas-container { aspect-ratio: 1 / 1; width: 100%; max-width: 500px; background: #000; border: 1px solid #30363d; display: flex; align-items: center; justify-content: center; position: relative; }
+        .mining-overlay { background: rgba(16, 185, 129, 0.1); backdrop-blur: 5px; }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden selection:bg-emerald-500/30">
@@ -46,7 +50,10 @@
                 <div class="w-4 h-4 bg-emerald-500 rounded-sm shadow-[0_0_20px_#10b981] animate-pulse"></div>
                 <div>
                     <h1 class="text-xs font-black tracking-[0.4em] text-emerald-500 uppercase leading-none">Smol-Agent // 130M-REAL-CORE</h1>
-                    <p class="text-[8px] text-slate-500 uppercase tracking-[0.2em] mt-1">Dual RTX 5090 SLI + TPU v6 Pod • Unified Vector Memory</p>
+                    <div class="flex items-center gap-2 mt-1">
+                        <p class="text-[8px] text-slate-500 uppercase tracking-[0.2em]">Dual RTX 5090 SLI + TPU v6 Pod</p>
+                        <span class="text-[8px] bg-emerald-500/10 text-emerald-500 px-1 rounded font-bold">CREDITS: <span id="credit-count">0</span></span>
+                    </div>
                 </div>
             </div>
 
@@ -54,6 +61,7 @@
             <nav class="flex bg-[#0d1117] rounded-lg overflow-hidden border border-white/5">
                 <button id="tab-chat" class="tab-btn active">Normal Chat</button>
                 <button id="tab-workspace" class="tab-btn">Agent Chat + Tools</button>
+                <button id="tab-image" class="tab-btn">Image Gen</button>
             </nav>
 
             <div class="flex gap-4 w-full lg:w-auto">
@@ -143,19 +151,62 @@
                 <div class="panel h-56"><div class="panel-header">Terminal</div><div id="terminal" class="terminal custom-scrollbar"></div></div>
             </div>
         </section>
+
+        <!-- TAB 3: IMAGE GEN -->
+        <section id="view-image" class="absolute inset-0 flex flex-col items-center justify-center bg-[#010409] hidden p-10 overflow-y-auto">
+            <div class="max-w-2xl w-full flex flex-col gap-8">
+                <div class="flex justify-between items-end">
+                    <div class="space-y-2">
+                        <h2 class="text-xl font-black text-emerald-500 uppercase tracking-widest">Visual Manifestation Engine</h2>
+                        <p class="text-xs text-slate-500">Powered by 300 Visual Semantic Nodes • 200 Credits/Image</p>
+                    </div>
+                    <button id="mine-credits" class="text-[9px] font-bold border border-emerald-500/30 text-emerald-500 px-4 py-2 rounded-lg hover:bg-emerald-500/10 transition-colors">
+                        GENERATE CREDITS (4,500 HASHES)
+                    </button>
+                </div>
+
+                <div class="canvas-container mx-auto rounded-2xl shadow-2xl relative overflow-hidden">
+                    <div id="image-display" class="w-full h-full flex items-center justify-center">
+                        <p class="text-slate-700 text-[10px] uppercase font-bold tracking-widest">No Manifestation</p>
+                    </div>
+                    <div id="mining-status" class="mining-overlay absolute inset-0 hidden flex flex-col items-center justify-center gap-4">
+                        <div class="text-emerald-500 text-[10px] font-black tracking-widest uppercase">Mining Proof-of-Work...</div>
+                        <div class="w-48 h-1 bg-slate-900 rounded-full overflow-hidden">
+                            <div id="mining-progress" class="h-full bg-emerald-500" style="width: 0%"></div>
+                        </div>
+                        <div id="hash-count" class="text-emerald-500/50 text-[8px]">0 / 4,500</div>
+                    </div>
+                </div>
+
+                <div class="relative bg-[#0d1117] border border-white/10 rounded-2xl p-5 flex items-end gap-5 shadow-2xl">
+                    <textarea id="prompt-image" placeholder="Describe the manifestation (e.g., Cyberpunk City, Forest Temple)..." class="flex-1 bg-transparent border-none text-emerald-50 outline-none text-sm leading-relaxed resize-none h-12" rows="1"></textarea>
+                    
+                    <div class="relative w-14 h-14">
+                        <button id="send-image" class="btn-action absolute inset-0 bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded-xl flex items-center justify-center transition-all active:scale-95">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                        </button>
+                        <button id="stop-image" class="btn-action absolute inset-0 bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center justify-center transition-all active:scale-95 hidden">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 
     <script>
         /**
-         * SMOL-AGENT 130M: REAL NEURAL ENGINE
-         * Fixed UI: Placeholder and greeting in Agent Tab updated.
+         * SMOL-AGENT 130M: REAL NEURAL ENGINE + IMAGE GEN
+         * Logic: 4,500 Hashes for Credits. 200 Credits for Image Gen.
          */
         
         let CONTEXT_BUFFER = [];
         let isProcessing = false;
+        let isMining = false;
         let abortSignal = false;
+        let credits = 0;
 
-        // 130M NODE KNOWLEDGE CORE (Semantic Similarity Map)
+        // 130M NODE KNOWLEDGE CORE
         const NEURAL_NODES = [
             { t: ["hello", "hi", "hey", "greetings"], v: "Hey! Glad you're here. My 130M-node core is fully synced and ready to go. What's the plan for today?" },
             { t: ["how", "are", "you", "status"], v: "I'm running peak efficiency right now. GPU-0 is managing the memory paging perfectly, and the TPU is idling at just the right temp. How about you?" },
@@ -163,61 +214,110 @@
             { t: ["think", "believe", "opinion", "philosophy"], v: "That's a deep topic. Processing that through my reasoning cluster... From where I sit as a neural system, everything is about patterns and similarity. What's your take on it?" },
             { t: ["code", "build", "javascript", "python", "rust"], v: "Technical logic detected. I'm ready to dive into the architecture with you. If you want to see the build live, let's head over to the Agent Workspace tab." },
             { t: ["fuck", "shit", "damn", "bad", "hate"], v: "Sounds like things are getting intense. I'm here to help you sort through the noise. Let's redirect that energy into something we can build or solve." },
-            { t: ["memory", "remember", "context", "history"], v: "My 50,000-token context buffer is currently active on GPU-0. I'm tracking every word of our chat to ensure our logic stays consistent as we scale up." },
-            { t: ["why", "reason", "logic", "explanation"], v: "Searching for the 'why' is the core of intelligence. My 130M nodes are currently mapping the dependencies of your question as we speak." }
+            { t: ["memory", "remember", "context", "history"], v: "My 50,000-token context buffer is currently active on GPU-0. I'm tracking every word of our chat to ensure our logic stays consistent as we scale up." }
         ];
+
+        // 300 VISUAL NODES (Recipes for SVG Generation)
+        const VISUAL_BRAIN = [
+            { t: "cyberpunk", s: `<rect width="500" height="500" fill="#010409"/><path d="M0 400 L500 400" stroke="#ff00ff" stroke-width="2"/><circle cx="250" cy="200" r="100" fill="none" stroke="#00ffff" stroke-width="1"/><path d="M100 100 L400 300" stroke="#00ffff" opacity="0.3"/>` },
+            { t: "forest", s: `<rect width="500" height="500" fill="#010409"/><circle cx="250" cy="600" r="400" fill="#064e3b"/><path d="M100 400 L150 200 L200 400" fill="#065f46"/><path d="M300 400 L350 150 L400 400" fill="#065f46"/>` },
+            { t: "space", s: `<rect width="500" height="500" fill="#000"/><circle cx="100" cy="100" r="2" fill="#fff"/><circle cx="400" cy="300" r="3" fill="#fff"/><circle cx="250" cy="250" r="50" fill="#facc15" filter="blur(5px)"/>` },
+            { t: "city", s: `<rect width="500" height="500" fill="#010409"/><rect x="50" y="300" width="80" height="200" fill="#1e293b"/><rect x="150" y="200" width="100" height="300" fill="#0f172a"/><rect x="270" y="350" width="120" height="150" fill="#1e293b"/>` },
+            { t: "abstract", s: `<rect width="500" height="500" fill="#010409"/><path d="M0 0 Q 250 500 500 0" stroke="#10b981" fill="none" stroke-width="5"/><circle cx="250" cy="250" r="150" stroke="#3b82f6" fill="none" opacity="0.2"/>` }
+        ];
+        // Populate remainder of 300 nodes procedurally
+        for(let i=0; i<295; i++) VISUAL_BRAIN.push({ t: `node_${i}`, s: `<rect width="500" height="500" fill="#010409"/><circle cx="${Math.random()*500}" cy="${Math.random()*500}" r="${Math.random()*50}" fill="#10b981" opacity="0.1"/>` });
 
         function getNeuralResponse(input) {
             const tokens = input.toLowerCase().split(/\W+/);
-            let bestMatch = null;
-            let maxScore = -1;
+            let bestMatch = null; let maxScore = -1;
             NEURAL_NODES.forEach(node => {
-                let score = 0;
-                tokens.forEach(t => { if (node.t.some(k => k.includes(t) || t.includes(k))) score += 1; });
+                let score = 0; tokens.forEach(t => { if (node.t.some(k => k.includes(t) || t.includes(k))) score += 1; });
                 if (score > maxScore) { maxScore = score; bestMatch = node; }
             });
-            return maxScore <= 0 ? "I'm parsing that through my 130M-node pool. It's a unique query—tell me more so I can narrow down the semantic intent in my vector map." : bestMatch.v;
+            return maxScore <= 0 ? "Parsing through 130M nodes... This intent is unique. Tell me more." : bestMatch.v;
         }
 
         // View Management
-        const tabChat = document.getElementById('tab-chat');
-        const tabWorkspace = document.getElementById('tab-workspace');
-        const viewChat = document.getElementById('view-chat');
-        const viewWorkspace = document.getElementById('view-workspace');
-
+        const tabs = { chat: 'view-chat', workspace: 'view-workspace', image: 'view-image' };
         function switchTab(t) {
-            tabChat.classList.toggle('active', t === 'chat');
-            tabWorkspace.classList.toggle('active', t === 'workspace');
-            viewChat.classList.toggle('hidden', t !== 'chat');
-            viewWorkspace.classList.toggle('hidden', t !== 'workspace');
+            Object.keys(tabs).forEach(k => {
+                document.getElementById(tabs[k]).classList.toggle('hidden', k !== t);
+                document.getElementById(`tab-${k}`).classList.toggle('active', k === t);
+            });
         }
-        tabChat.onclick = () => switchTab('chat');
-        tabWorkspace.onclick = () => switchTab('workspace');
+        document.getElementById('tab-chat').onclick = () => switchTab('chat');
+        document.getElementById('tab-workspace').onclick = () => switchTab('workspace');
+        document.getElementById('tab-image').onclick = () => switchTab('image');
 
-        // Hardware Threads
-        const threads = [];
-        const threadPool = document.getElementById('thread-pool');
+        // Hardware Simulation
+        const threads = []; const threadPool = document.getElementById('thread-pool');
         for(let i=0; i<16; i++){
-            const d = document.createElement('div');
-            d.className = "flex-1 bg-slate-800 thread-bar rounded-t-[1px]";
-            d.style.height = '10%';
-            threadPool.appendChild(d);
-            threads.push(d);
+            const d = document.createElement('div'); d.className = "flex-1 bg-slate-800 thread-bar rounded-t-[1px]"; d.style.height = '10%';
+            threadPool.appendChild(d); threads.push(d);
         }
-
         function updateHardware() {
             threads.forEach(t => {
-                const h = isProcessing ? (Math.random() * 70 + 20) : (Math.random() * 10 + 5);
-                t.style.height = `${h}%`;
-                t.style.backgroundColor = h > 80 ? '#10b981' : '#1e293b';
+                const h = (isProcessing || isMining) ? (Math.random() * 70 + 20) : (Math.random() * 10 + 5);
+                t.style.height = `${h}%`; t.style.backgroundColor = h > 80 ? '#10b981' : '#1e293b';
             });
-            const tpu = isProcessing ? (Math.random() * 15 + 80) : (Math.random() * 2);
+            const tpu = (isProcessing || isMining) ? (Math.random() * 15 + 80) : (Math.random() * 2);
             document.getElementById('tpu-fill').style.width = `${tpu}%`;
             document.getElementById('tpu-val').innerText = `${tpu.toFixed(0)}%`;
+            document.getElementById('credit-count').innerText = credits;
             requestAnimationFrame(updateHardware);
         }
         updateHardware();
 
+        // Credit Mining (4,500 Hashes)
+        async function mineCredits() {
+            if(isMining || isProcessing) return;
+            isMining = true;
+            document.getElementById('mining-status').classList.remove('hidden');
+            
+            for(let i=0; i<=4500; i++) {
+                if (i % 50 === 0) {
+                    document.getElementById('mining-progress').style.width = `${(i/4500)*100}%`;
+                    document.getElementById('hash-count').innerText = `${i} / 4,500`;
+                    // Simulate cryptographic work
+                    await new Promise(r => setTimeout(r, 10));
+                }
+            }
+            
+            credits += 900;
+            isMining = false;
+            document.getElementById('mining-status').classList.add('hidden');
+        }
+        document.getElementById('mine-credits').onclick = mineCredits;
+
+        // Image Manifestation
+        async function handleImageGen() {
+            const input = document.getElementById('prompt-image');
+            const prompt = input.value.trim().toLowerCase();
+            if(!prompt || isProcessing) return;
+            if(credits < 200) { alert("Insufficient Credits. Mine some GPU proof-of-work first!"); return; }
+
+            credits -= 200;
+            isProcessing = true;
+            abortSignal = false;
+            toggleButtons('image', true);
+            input.value = '';
+
+            const display = document.getElementById('image-display');
+            display.innerHTML = `<div class="text-[8px] text-emerald-500 font-bold animate-pulse">MANIFESTING FROM 300 VISUAL NODES...</div>`;
+
+            await new Promise(r => setTimeout(r, 2000)); // Latency for "Generation"
+            
+            if(!abortSignal) {
+                let match = VISUAL_BRAIN.find(node => prompt.includes(node.t)) || VISUAL_BRAIN[Math.floor(Math.random() * VISUAL_BRAIN.length)];
+                display.innerHTML = `<svg width="500" height="500" viewBox="0 0 500 500">${match.s}</svg>`;
+            }
+
+            isProcessing = false;
+            toggleButtons('image', false);
+        }
+
+        // Standard Interface Functions
         async function streamText(el, text, scrollEl) {
             const words = text.split(' ');
             for (let word of words) {
@@ -227,88 +327,47 @@
                 await new Promise(r => setTimeout(r, 25 + Math.random() * 15));
             }
         }
-
         function createMsg(role, targetContainer, scrollEl) {
             const wrap = document.createElement('div');
             wrap.className = `flex gap-4 ${role === 'user' ? 'flex-row-reverse' : ''} mb-8 animate-in fade-in`;
-            wrap.innerHTML = `
-                <div class="w-10 h-10 rounded-xl bg-[#010409] border border-emerald-500/20 flex items-center justify-center shrink-0">${role === 'user' ? '👤' : '🤖'}</div>
-                <div class="${role === 'user' ? 'bg-emerald-600' : 'bg-[#0d1117] border border-white/5'} p-5 rounded-2xl text-[11px] leading-relaxed max-w-[85%] shadow-xl"><div class="content whitespace-pre-wrap"></div></div>
-            `;
-            targetContainer.appendChild(wrap);
-            scrollEl.scrollTop = scrollEl.scrollHeight;
+            wrap.innerHTML = `<div class="w-10 h-10 rounded-xl bg-[#010409] border border-emerald-500/20 flex items-center justify-center shrink-0">${role === 'user' ? '👤' : '🤖'}</div><div class="${role === 'user' ? 'bg-emerald-600' : 'bg-[#0d1117] border border-white/5'} p-5 rounded-2xl text-[11px] leading-relaxed max-w-[85%] shadow-xl"><div class="content whitespace-pre-wrap"></div></div>`;
+            targetContainer.appendChild(wrap); scrollEl.scrollTop = scrollEl.scrollHeight;
             return wrap.querySelector('.content');
         }
-
         function toggleButtons(view, processing) {
-            const sendBtn = document.getElementById(`send-${view}`);
-            const stopBtn = document.getElementById(`stop-${view}`);
-            if (processing) {
-                sendBtn.classList.add('hidden');
-                stopBtn.classList.remove('hidden');
-            } else {
-                sendBtn.classList.remove('hidden');
-                stopBtn.classList.add('hidden');
-            }
+            document.getElementById(`send-${view}`).classList.toggle('hidden', processing);
+            document.getElementById(`stop-${view}`).classList.toggle('hidden', !processing);
         }
-
         async function handleInference(view) {
             const input = document.getElementById(`prompt-${view}`);
             const prompt = input.value.trim();
             if(!prompt || isProcessing) return;
-
-            isProcessing = true;
-            abortSignal = false;
-            toggleButtons(view, true);
-            input.value = '';
-
+            isProcessing = true; abortSignal = false; toggleButtons(view, true); input.value = '';
             const container = document.getElementById(`chat-output-${view === 'normal' ? 'normal' : 'workspace'}`);
             const scroll = document.getElementById(`scroll-area-${view === 'normal' ? 'chat' : 'workspace'}`);
-            
-            const userBox = createMsg('user', container, scroll);
-            userBox.innerText = prompt;
-
+            const userBox = createMsg('user', container, scroll); userBox.innerText = prompt;
             const agentBox = createMsg('agent', container, scroll);
-            const response = getNeuralResponse(prompt);
-
             if(view === 'workspace') {
-                const thought = document.createElement('div');
-                thought.className = 'agent-thought';
-                thought.innerText = `[130M_VECTOR_SCAN] Intent received: "${prompt}". Constructing HTML...`;
+                const thought = document.createElement('div'); thought.className = 'agent-thought'; thought.innerText = `[130M_VECTOR_SCAN] Intent received: "${prompt}". Constructing HTML...`;
                 agentBox.parentNode.insertBefore(thought, agentBox);
-                
-                await streamText(agentBox, `I'm manifesting your idea into an HTML page right now. The dual 5090s are processing the layout logic. Check the Workspace panels.`, scroll);
-                document.getElementById('editor').innerText = `<!-- AGENT GENERATED HTML -->\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  body { background: #0f172a; color: #10b981; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }\n  .box { padding: 40px; border: 2px solid #10b981; border-radius: 20px; text-align: center; }\n</style>\n</head>\n<body>\n  <div class="box">\n    <h1>${prompt.toUpperCase()}</h1>\n    <p>Rendered by Smol-Agent 130M</p>\n  </div>\n</body>\n</html>`;
-                document.getElementById('browser-view').innerHTML = `<div class="h-full flex items-center justify-center font-sans bg-[#0f172a] text-[#10b981] overflow-hidden">
-                    <div style="border: 2px solid #10b981; padding: 20px; border-radius: 10px; text-align: center;">
-                        <h1>${prompt}</h1>
-                        <p style="font-size: 10px; opacity: 0.5;">AGNET_RENDER_V1</p>
-                    </div>
-                </div>`;
+                await streamText(agentBox, `Manifesting your idea into HTML. Check panels.`, scroll);
+                document.getElementById('editor').innerText = `<!-- AGENT GENERATED -->\n<div class="p-20"><h1>${prompt.toUpperCase()}</h1></div>`;
+                document.getElementById('browser-view').innerHTML = `<div style="padding: 20px; color: #10b981; background: #0f172a; text-align: center;"><h1>${prompt}</h1></div>`;
             } else {
-                await streamText(agentBox, response, scroll);
+                await streamText(agentBox, getNeuralResponse(prompt), scroll);
             }
-
-            isProcessing = false;
-            toggleButtons(view, false);
-        }
-
-        function stopGeneration() {
-            abortSignal = true;
-            isProcessing = false;
-            toggleButtons('normal', false);
-            toggleButtons('workspace', false);
+            isProcessing = false; toggleButtons(view, false);
         }
 
         document.getElementById('send-normal').onclick = () => handleInference('normal');
         document.getElementById('send-workspace').onclick = () => handleInference('workspace');
-        document.getElementById('stop-normal').onclick = stopGeneration;
-        document.getElementById('stop-workspace').onclick = stopGeneration;
+        document.getElementById('send-image').onclick = handleImageGen;
+        document.getElementById('stop-normal').onclick = () => { abortSignal = true; isProcessing = false; toggleButtons('normal', false); };
+        document.getElementById('stop-workspace').onclick = () => { abortSignal = true; isProcessing = false; toggleButtons('workspace', false); };
+        document.getElementById('stop-image').onclick = () => { abortSignal = true; isProcessing = false; toggleButtons('image', false); };
         
-        ['normal', 'workspace'].forEach(v => {
-            document.getElementById(`prompt-${v}`).onkeydown = (e) => {
-                if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleInference(v); }
-            };
+        ['normal', 'workspace', 'image'].forEach(v => {
+            document.getElementById(`prompt-${v}`).onkeydown = (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); v === 'image' ? handleImageGen() : handleInference(v); } };
         });
     </script>
 </body>
